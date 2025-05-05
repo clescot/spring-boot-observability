@@ -1,0 +1,91 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  tail_sampling:
+#    decision_wait: 30s
+#    num_traces: 50000
+#    expected_new_traces_per_sec: 0
+    #cf https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/processor/tailsamplingprocessor/config.go
+    policies:
+      [
+        {
+          name: latency-policy,
+          type: latency,
+          latency: { threshold_ms: 2000, upper_threshold_ms: 20000 }
+        },
+        {
+          name: errors-policy,
+          type: status_code,
+          status_code: { status_codes: [ERROR] },
+        },
+        {
+          name: randomized-policy,
+          type: probabilistic,
+          probabilistic: { sampling_percentage: 10 },
+        },
+      ]
+
+  filter/duration:
+    traces:
+      span:
+       - (end_time - start_time) <= Duration("0.1s")
+  batch:
+    send_batch_size: 10000
+    timeout: 10s
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 15
+  probabilistic_sampler:
+    hash_seed: 22
+    sampling_percentage: 20
+exporters:
+  debug:
+    verbosity: detailed
+  otlp:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+  otlphttp/logs:
+    endpoint: "http://loki:3100/otlp"
+    tls:
+      insecure: true
+
+extensions:
+  health_check:
+  pprof:
+  zpages:
+
+service:
+  extensions: [health_check, pprof, zpages]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [filter/duration,memory_limiter, batch]
+      exporters: [debug,otlp]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug,prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug,otlphttp/logs]
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: '0.0.0.0'
+                port: 8888
+
+
+

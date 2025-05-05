@@ -1,15 +1,27 @@
-x-logging: &default-logging
-  driver: loki
-  options:
-    loki-url: 'http://localhost:3100/api/prom/push'
-    loki-pipeline-stages: |
-      - multiline:
-          firstline: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}'
-          max_wait_time: 3s
-      - regex:
-          expression: '^(?P<date>\d{4}-\d{2}-\d{2})T(?P<time>\d{2}:\d{2}:\d{2}.\d{3}) (?P<message>(?s:.*))$$'
+#x-logging: &default-logging
+#  driver: loki
+#  options:
+#    loki-url: 'http://localhost:3100/api/prom/push'
+#    loki-pipeline-stages: |
+#      - multiline:
+#          firstline: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}'
+#          max_wait_time: 3s
+#      - regex:
+#          expression: '^(?P<date>\d{4}-\d{2}-\d{2})T(?P<time>\d{2}:\d{2}:\d{2}.\d{3}) (?P<message>(?s:.*))$$'
 
 services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - 1888:1888 # pprof extension
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 8889:8889 # Prometheus exporter metrics
+      - 13133:13133 # health_check extension
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+      - 55679:55679 # zpages extension
   # Infrastructure
   loki:
     image: grafana/loki:3.0.0
@@ -28,17 +40,17 @@ services:
       - --enable-feature=exemplar-storage
     depends_on:
       - loki
-    logging: *default-logging
+    #logging: *default-logging
 
   tempo:
     image: grafana/tempo:2.4.1
     command: [ "--target=all", "--storage.trace.backend=local", "--storage.trace.local.path=/var/tempo", "--auth.enabled=false" ]
     ports:
       - "14250:14250"
-      - "4317:4317"
+      - "4417:4317"
     depends_on:
       - loki
-    logging: *default-logging
+    #logging: *default-logging
 
   grafana:
     image: grafana/grafana:10.4.2
@@ -51,60 +63,60 @@ services:
     depends_on:
       - loki
       - prometheus
-    logging: *default-logging
+    #logging: *default-logging
 
   # Applications
 
   app-a:
-    # build: ./app/
-    image: ghcr.io/blueswen/spring-boot-observability/app:latest
+    build: ./app/
+    #image: ghcr.io/blueswen/spring-boot-observability/app:latest
     environment:
       - TARGET_ONE_HOST=app-b
       - TARGET_TWO_HOST=app-c
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317 # send traces to Tempo
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317 # send traces to Tempo
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc # use gRPC for OTLP
       - OTEL_SERVICE_NAME=app-a # service name for Span
       - OTEL_RESOURCE_ATTRIBUTES=compose_service=app-a # add custom resource attribute to Span for Grafana Trace to Logs feature
-      - OTEL_METRICS_EXPORTER=none # disable metrics exporter
-      - OTEL_LOGS_EXPORTER=none # disable logs exporter
+      #      - OTEL_METRICS_EXPORTER=none # disable metrics exporter
+      #      - OTEL_LOGS_EXPORTER=none # disable logs exporter
       - MANAGEMENT_METRICS_TAGS_APPLICATION=app-a # override default value of management.metrics.tags.application in app/src/main/resources/application.properties
     ports:
       - "8080:8080"
-    logging: *default-logging
+    #logging: *default-logging
 
   app-b:
-    # build: ./app/
-    image: ghcr.io/blueswen/spring-boot-observability/app:latest
+    build: ./app/
+    #image: ghcr.io/blueswen/spring-boot-observability/app:latest
     environment:
       - TARGET_ONE_HOST=app-b
       - TARGET_TWO_HOST=app-c
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=app-b
       - OTEL_RESOURCE_ATTRIBUTES=compose_service=app-b
-      - OTEL_METRICS_EXPORTER=none
-      - OTEL_LOGS_EXPORTER=none
+#      - OTEL_METRICS_EXPORTER=none
+#      - OTEL_LOGS_EXPORTER=none
       - MANAGEMENT_METRICS_TAGS_APPLICATION=app-b
     ports:
       - "8081:8080"
-    logging: *default-logging
+    #logging: *default-logging
 
   app-c:
-    # build: ./app/
-    image: ghcr.io/blueswen/spring-boot-observability/app:latest
+    build: ./app/
+    #image: ghcr.io/blueswen/spring-boot-observability/app:latest
     environment:
       - TARGET_ONE_HOST=app-b
       - TARGET_TWO_HOST=app-c
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:4317
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=app-c
       - OTEL_RESOURCE_ATTRIBUTES=compose_service=app-c
-      - OTEL_METRICS_EXPORTER=none
-      - OTEL_LOGS_EXPORTER=none
+      #      - OTEL_METRICS_EXPORTER=none
+      #      - OTEL_LOGS_EXPORTER=none
       - MANAGEMENT_METRICS_TAGS_APPLICATION=app-c
     ports:
       - "8082:8080"
-    logging: *default-logging
+    #logging: *default-logging
 
   postgres:
     image: postgres:17.4-alpine3.21
@@ -114,10 +126,10 @@ services:
       - POSTGRES_DB=postgres
     ports:
       - "5432:5432"
-    logging: *default-logging
+    #logging: *default-logging
 
   redis:
     image: redis:7.2.4
     ports:
       - "6379:6379"
-    logging: *default-logging
+    #logging: *default-logging
