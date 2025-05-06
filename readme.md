@@ -571,3 +571,4 @@ aws distro for otel on ecs => collector : https://aws-otel.github.io/docs/setup/
 
 auto-instrument with java agent for aws : https://aws-otel.github.io/docs/getting-started/java-sdk/auto-instr
 
+hot reload otel collector config : https://last9.io/blog/hot-reload-for-opentelemetry-collector/
