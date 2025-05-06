@@ -560,3 +560,14 @@ grafana:
 
 dashboard otel collector :
 https://grafana.com/grafana/dashboards/15983-opentelemetry-collector/
+
+
+recommended processors :
+https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor#recommended-processors
+
+AWS Distro for OpenTelemetry : https://aws-otel.github.io/
+
+aws distro for otel on ecs => collector : https://aws-otel.github.io/docs/setup/ecs
+
+auto-instrument with java agent for aws : https://aws-otel.github.io/docs/getting-started/java-sdk/auto-instr
+
