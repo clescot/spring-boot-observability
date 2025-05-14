@@ -23,11 +23,11 @@ receivers:
           system.network.io:
             enabled: true
 processors:
-  resourcedetection:
-    detectors: [ env, system ]
-    #detectors: [ env, system, lambda, elasticbeanstalk, eks, ecs, ec2  ]
-    #detectors: [ env, system, lambda, ecs, ec2  ]
+  resourcedetection/docker:
+    detectors: [ env, docker ]
     timeout: 2s
+    override: false
+    #detectors: [ env, system, lambda, elasticbeanstalk, eks, ecs, ec2  ]
   tail_sampling:
 #    decision_wait: 30s
 #    num_traces: 50000
@@ -95,7 +95,7 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [resourcedetection,debug,prometheus]
+      exporters: [resourcedetection/docker,debug,prometheus]
     logs:
       receivers: [otlp]
       processors: [batch]
