@@ -70,7 +70,7 @@ exporters:
   debug:
     verbosity: detailed
   otlp:
-    endpoint: tempo:4317
+    endpoint: "http://tempo:4317"
     tls:
       insecure: true
   prometheus:
