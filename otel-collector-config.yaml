@@ -24,7 +24,7 @@ receivers:
             enabled: true
 processors:
   resourcedetection/docker:
-    detectors: [ env, docker ]
+    detectors: [env, docker]
     timeout: 2s
     override: false
     #detectors: [ env, system, lambda, elasticbeanstalk, eks, ecs, ec2  ]
@@ -94,8 +94,8 @@ service:
       exporters: [debug,otlp]
     metrics:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [resourcedetection/docker,debug,prometheus]
+      processors: [resourcedetection/docker,batch]
+      exporters: [debug,prometheus]
     logs:
       receivers: [otlp]
       processors: [batch]
