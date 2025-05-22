@@ -65,13 +65,17 @@ services:
       - ./etc/prometheus:/workspace
     command:
       - --config.file=/workspace/prometheus.yml
+      - --web.enable-remote-write-receiver
       - --enable-feature=exemplar-storage
+      - --enable-feature=native-histograms
     depends_on:
       - loki
     #logging: *default-logging
 
   tempo:
     image: grafana/tempo:2.7.2
+    # :-(
+    user: root
     command: [ "--target=all","-config.file=/etc/tempo.yaml", "--storage.trace.backend=local", "--storage.trace.local.path=/var/tempo", "--auth.enabled=false" ]
     ports:
       - "3200:3200"
